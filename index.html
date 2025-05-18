@@ -1,678 +1,299 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Snake Game - Fun Edition</title>
-<style>
-  /* Basic Reset */
-  * {
-    box-sizing: border-box;
-  }
-
-  body, html {
-    margin: 0; padding: 0; height: 100%;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(135deg, #3a6186, #89253e);
-    color: #fff;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-  }
-
-  #gameContainer {
-    position: relative;
-    background: #222;
-    border-radius: 12px;
-    box-shadow: 0 0 15px #00ff99aa;
-  }
-
-  canvas {
-    display: block;
-    background: #111;
-    border-radius: 12px;
-  }
-
-  /* Start Modal */
-  #startModal {
-    position: fixed;
-    inset: 0;
-    background: rgba(10, 10, 10, 0.95);
-    z-index: 9999;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-    overflow-y: auto;
-  }
-
-  #startModal h1 {
-    margin-bottom: 20px;
-    font-size: 2rem;
-    color: #00ff99;
-    text-shadow: 0 0 6px #00ff99aa;
-  }
-
-  #startModal label {
-    display: block;
-    margin-top: 12px;
-    font-weight: bold;
-  }
-
-  #startModal select, #startModal input[type=color] {
-    margin-top: 6px;
-    padding: 8px 12px;
-    font-size: 1rem;
-    border-radius: 6px;
-    border: none;
-  }
-
-  #startModal .color-pickers {
-    display: flex;
-    gap: 20px;
-    margin-top: 10px;
-  }
-
-  #startModal .color-pickers > div {
-    flex: 1;
-  }
-
-  #startModal button {
-    margin-top: 24px;
-    padding: 12px 24px;
-    font-size: 1.2rem;
-    background: #00ff99;
-    color: #111;
-    font-weight: bold;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    box-shadow: 0 0 10px #00ff99cc;
-    transition: background 0.3s ease;
-  }
-
-  #startModal button:hover {
-    background: #00cc7a;
-  }
-
-  /* Info bar */
-  #infoBar {
-    margin-top: 12px;
-    font-size: 1.1rem;
-    text-align: center;
-    letter-spacing: 1px;
-  }
-
-  /* Game Over Screen */
-  #gameOverScreen {
-    position: absolute;
-    inset: 0;
-    background: rgba(10, 10, 10, 0.85);
-    color: #00ff99;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.3rem;
-    border-radius: 12px;
-    z-index: 1000;
-  }
-
-  #gameOverScreen h2 {
-    font-size: 2rem;
-    margin-bottom: 16px;
-    text-shadow: 0 0 10px #00ff99bb;
-  }
-
-  #gameOverScreen .stats {
-    margin-bottom: 20px;
-    line-height: 1.5;
-  }
-
-  #gameOverScreen button {
-    padding: 10px 20px;
-    font-size: 1.2rem;
-    background: #00ff99;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: bold;
-    box-shadow: 0 0 10px #00ff99cc;
-  }
-
-  /* Responsive */
-  @media (max-width: 600px) {
-    #startModal {
-      padding: 10px;
-    }
-    #startModal h1 {
-      font-size: 1.5rem;
-    }
-    #startModal button {
-      font-size: 1rem;
-      padding: 10px 18px;
-    }
-    #infoBar {
-      font-size: 1rem;
-    }
-  }
-</style>
-</head>
-<body>
-
-<div id="gameContainer">
-  <canvas id="gameCanvas"></canvas>
-  <div id="gameOverScreen" style="display:none;">
-    <h2>Game Over!</h2>
-    <div class="stats"></div>
-    <button id="restartBtn">Play Again</button>
-  </div>
-</div>
-
-<div id="infoBar"></div>
-
-<!-- Start Modal -->
-<div id="startModal">
-  <h1>Customize Your Snake Game</h1>
-  <label for="snakeShape">Snake Shape:</label>
-  <select id="snakeShape">
-    <option value="circle">Circle</option>
-    <option value="square">Square</option>
-    <option value="hexagon">Hexagon</option>
-    <option value="triangle">Triangle</option>
-  </select>
-
-  <label for="difficulty">Difficulty:</label>
-  <select id="difficulty">
-    <option value="easy">Easy</option>
-    <option value="medium" selected>Medium</option>
-    <option value="hard">Hard</option>
-  </select>
-
-  <label for="wallWrap">
-    <input type="checkbox" id="wallWrap" />
-    Enable Wall Wrap
-  </label>
-
-  <div class="color-pickers">
-    <div>
-      <label for="snakeColor">Snake Color:</label>
-      <input type="color" id="snakeColor" value="#00ff99" />
-    </div>
-    <div>
-      <label for="foodColor">Food Color:</label>
-      <input type="color" id="foodColor" value="#ff4444" />
-    </div>
-  </div>
-
-  <button id="startGameBtn">Start Game</button>
-</div>
-
-<script>
-(() => {
-  // Canvas and context
-  const canvas = document.getElementById('gameCanvas');
-  const ctx = canvas.getContext('2d');
-  const gameContainer = document.getElementById('gameContainer');
-  const infoBar = document.getElementById('infoBar');
-  const startModal = document.getElementById('startModal');
-  const restartBtn = document.getElementById('restartBtn');
-  const gameOverScreen = document.getElementById('gameOverScreen');
-  const gameOverStats = gameOverScreen.querySelector('.stats');
-
-  // Customization controls
-  const snakeShapeSelect = document.getElementById('snakeShape');
-  const difficultySelect = document.getElementById('difficulty');
-  const wallWrapCheckbox = document.getElementById('wallWrap');
-  const snakeColorPicker = document.getElementById('snakeColor');
-  const foodColorPicker = document.getElementById('foodColor');
-  const startGameBtn = document.getElementById('startGameBtn');
-
-  // Game variables
-  let tileSize = 20;  // size of one grid square
-  let gridCols, gridRows;
-  let snake = [];
-  let direction = 'right';
-  let nextDirection = 'right';
-  let food = {};
-  let gameLoopInterval;
-  let speed = 150;
-  let isRunning = false;
-  let wallWrap = false;
-  let snakeColor = '#00ff99';
-  let foodColor = '#ff4444';
-  let snakeShape = 'circle';
-  let startTime = 0;
-  let score = 0;
-
-  // Sounds (basic short clips from freesound.org)
-  const sounds = {
-    eat: new Audio('https://freesound.org/data/previews/276/276020_5121236-lq.mp3'),
-    gameOver: new Audio('https://freesound.org/data/previews/331/331912_3248244-lq.mp3'),
-    move: new Audio('https://freesound.org/data/previews/459/459660_838627-lq.mp3'),
-  };
-  // Preload sounds to reduce delay
-  Object.values(sounds).forEach(s => { s.load(); });
-
-  // Setup canvas size and grid dynamically
-  function adjustCanvasSize() {
-    // Limit max canvas size for desktop web to 400x300, else adapt smaller for mobile
-    const maxWidth = 400;
-    const maxHeight = 300;
-    const marginX = 20;
-    const marginY = 120; // to accommodate info and padding
-
-    let availableWidth = window.innerWidth - marginX;
-    let availableHeight = window.innerHeight - marginY;
-
-    let canvasWidth = Math.min(availableWidth, maxWidth);
-    let canvasHeight = Math.min(availableHeight, maxHeight);
-
-    // Calculate cols and rows based on tileSize
-    gridCols = Math.floor(canvasWidth / tileSize);
-    gridRows = Math.floor(canvasHeight / tileSize);
-
-    // Adjust canvas size exactly to grid size
-    canvas.width = gridCols * tileSize;
-    canvas.height = gridRows * tileSize;
-
-    // Center game container horizontally
-    gameContainer.style.width = canvas.width + 'px';
-    gameContainer.style.height = canvas.height + 'px';
-  }
-
-  // Initialize snake at center
-  function initSnake() {
-    snake = [];
-    let startX = Math.floor(gridCols / 2);
-    let startY = Math.floor(gridRows / 2);
-    for (let i = 3; i > 0; i--) {
-      snake.push({ x: startX - i, y: startY });
-    }
-    direction = 'right';
-    nextDirection = 'right';
-  }
-
-  // Place food at random location not occupied by snake
-  function placeFood() {
-    let newFoodPos;
-    do {
-      newFoodPos = {
-        x: Math.floor(Math.random() * gridCols),
-        y: Math.floor(Math.random() * gridRows)
-      };
-    } while (snake.some(s => s.x === newFoodPos.x && s.y === newFoodPos.y));
-    food = newFoodPos;
-  }
-
-  // Draw the grid background (optional, subtle)
-  function drawGrid() {
-    ctx.fillStyle = '#111';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.strokeStyle = '#222';
-    ctx.lineWidth = 1;
-    for (let c = 0; c <= gridCols; c++) {
-      ctx.beginPath();
-      ctx.moveTo(c * tileSize, 0);
-      ctx.lineTo(c * tileSize, canvas.height);
-      ctx.stroke();
-    }
-    for (let r = 0; r <= gridRows; r++) {
-      ctx.beginPath();
-      ctx.moveTo(0, r * tileSize);
-      ctx.lineTo(canvas.width, r * tileSize);
-      ctx.stroke();
-    }
-  }
-
-  // Utility: Draw hexagon shape
-  function drawHexagon(x, y, size, color) {
-    const angle = (Math.PI * 2) / 6;
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    for (let i = 0; i < 6; i++) {
-      ctx.lineTo(x + size * Math.cos(angle * i), y + size * Math.sin(angle * i));
-    }
-    ctx.closePath();
-    ctx.fill();
-  }
-
-  // Utility: Draw triangle shape
-  function drawTriangle(x, y, size, color, direction='up') {
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    if (direction === 'up') {
-      ctx.moveTo(x, y - size);
-      ctx.lineTo(x - size, y + size);
-      ctx.lineTo(x + size, y + size);
-    } else if (direction === 'down') {
-      ctx.moveTo(x, y + size);
-      ctx.lineTo(x - size, y - size);
-      ctx.lineTo(x + size, y - size);
-    }
-    ctx.closePath();
-    ctx.fill();
-  }
-
-  // Draw snake tongue
-  function drawTongue(x, y, size, color, dir) {
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    if (dir === 'right') {
-      ctx.moveTo(x + size, y);
-      ctx.lineTo(x + size + 6, y - 4);
-      ctx.moveTo(x + size, y);
-      ctx.lineTo(x + size + 6, y + 4);
-    } else if (dir === 'left') {
-      ctx.moveTo(x - size, y);
-      ctx.lineTo(x - size - 6, y - 4);
-      ctx.moveTo(x - size, y);
-      ctx.lineTo(x - size - 6, y + 4);
-    } else if (dir === 'up') {
-      ctx.moveTo(x, y - size);
-      ctx.lineTo(x - 4, y - size - 6);
-      ctx.moveTo(x, y - size);
-      ctx.lineTo(x + 4, y - size - 6);
-    } else if (dir === 'down') {
-      ctx.moveTo(x, y + size);
-      ctx.lineTo(x - 4, y + size + 6);
-      ctx.moveTo(x, y + size);
-      ctx.lineTo(x + 4, y + size + 6);
-    }
-    ctx.stroke();
-  }
-
-  // Draw a single snake segment based on chosen shape
-  function drawSnakeSegment(pos, isHead=false) {
-    const centerX = pos.x * tileSize + tileSize / 2;
-    const centerY = pos.y * tileSize + tileSize / 2;
-    const size = tileSize / 2 * 0.8;
-    const fillColor = snakeColor;
-    ctx.fillStyle = fillColor;
-    ctx.strokeStyle = '#005533';
-    ctx.lineWidth = 2;
-
-    switch (snakeShape) {
-      case 'circle':
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, size * 0.8, 0, 2 * Math.PI);
-        ctx.fill();
-        ctx.stroke();
-        if (isHead) drawTongue(centerX, centerY, size * 0.8, '#ff0000', direction);
-        break;
-
-      case 'square':
-        ctx.fillRect(centerX - size, centerY - size, size * 2, size * 2);
-        ctx.strokeRect(centerX - size, centerY - size, size * 2, size * 2);
-        if (isHead) drawTongue(centerX, centerY, size, '#ff0000', direction);
-        break;
-
-      case 'hexagon':
-        drawHexagon(centerX, centerY, size, fillColor);
-        if (isHead) drawTongue(centerX, centerY, size, '#ff0000', direction);
-        break;
-
-      case 'triangle':
-        // Face triangle in direction of movement for the head
-        if (isHead) {
-          let dirMap = { right: 'up', left: 'down', up: 'up', down: 'down' };
-          drawTriangle(centerX, centerY, size, fillColor, dirMap[direction]);
-          drawTongue(centerX, centerY, size, '#ff0000', direction);
-        } else {
-          drawTriangle(centerX, centerY, size, fillColor, 'up');
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snake.io</title>
+    <style>
+        * {
+            box-sizing: border-box;
         }
-        break;
 
-      default:
-        // fallback circle
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, size * 0.8, 0, 2 * Math.PI);
-        ctx.fill();
-        ctx.stroke();
-        if (isHead) drawTongue(centerX, centerY, size * 0.8, '#ff0000', direction);
-        break;
-    }
-  }
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+            color: #fff;
+        }
 
-  // Draw food (simple circle with color)
-  function drawFood() {
-    const centerX = food.x * tileSize + tileSize / 2;
-    const centerY = food.y * tileSize + tileSize / 2;
-    const radius = tileSize * 0.4;
-    ctx.fillStyle = foodColor;
-    ctx.beginPath();
-    ctx.shadowColor = '#ff4444cc';
-    ctx.shadowBlur = 8;
-    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.shadowBlur = 0;
-  }
+        canvas {
+            background-color: #000;
+            border-radius: 12px;
+            display: block;
+            margin: 0 auto;
+        }
 
-  // Draw everything on canvas
-  function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    drawGrid();
+        .screen {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+            max-width: 90vw;
+        }
 
-    // Draw food
-    drawFood();
+        .screen.active {
+            display: flex;
+        }
 
-    // Draw snake
-    snake.forEach((segment, i) => {
-      drawSnakeSegment(segment, i === snake.length - 1);
-    });
-  }
+        .title {
+            font-size: 3em;
+            font-weight: bold;
+            color: #00ffcc;
+            margin-bottom: 20px;
+        }
 
-  // Update snake's position and game logic
-  function update() {
-    if (!isRunning) return;
+        .options {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+        }
 
-    // Change direction only if not opposite
-    if (
-      (direction === 'up' && nextDirection !== 'down') ||
-      (direction === 'down' && nextDirection !== 'up') ||
-      (direction === 'left' && nextDirection !== 'right') ||
-      (direction === 'right' && nextDirection !== 'left')
-    ) {
-      direction = nextDirection;
-    }
+        .option-box {
+            background: #1a1a1a;
+            padding: 15px 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+        }
 
-    // Calculate new head position
-    let head = { ...snake[snake.length - 1] };
+        select, button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            background: #00ffcc;
+            color: #000;
+            font-weight: bold;
+            font-size: 1em;
+        }
 
-    if (direction === 'right') head.x += 1;
-    else if (direction === 'left') head.x -= 1;
-    else if (direction === 'up') head.y -= 1;
-    else if (direction === 'down') head.y += 1;
+        .mobile-controls {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 10px;
+        }
 
-    // Wall wrap or collision with walls
-    if (wallWrap) {
-      if (head.x < 0) head.x = gridCols - 1;
-      else if (head.x >= gridCols) head.x = 0;
-      if (head.y < 0) head.y = gridRows - 1;
-      else if (head.y >= gridRows) head.y = 0;
-    } else {
-      if (head.x < 0 || head.x >= gridCols || head.y < 0 || head.y >= gridRows) {
-        return gameOver();
-      }
-    }
+        .controls-row {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
 
-    // Check collision with self
-    if (snake.some(segment => segment.x === head.x && segment.y === head.y)) {
-      return gameOver();
-    }
+        .control-button {
+            background-color: #00ffcc;
+            color: #000;
+            font-size: 1.2em;
+            font-weight: bold;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
 
-    // Add new head
-    snake.push(head);
+        @media (max-width: 768px) {
+            .mobile-controls {
+                display: flex;
+            }
+        }
+    </style>
+</head>
 
-    // Check if food eaten
-    if (head.x === food.x && head.y === food.y) {
-      score++;
-      sounds.eat.currentTime = 0;
-      sounds.eat.play();
-      placeFood();
+<body>
+    <div id="startScreen" class="screen active">
+        <div class="title">Snake.io</div>
+        <div class="options">
+            <div class="option-box">
+                <label>Difficulty:
+                    <select id="difficulty">
+                        <option value="easy">Easy</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="hard">Hard</option>
+                    </select>
+                </label>
+            </div>
+            <div class="option-box">
+                <label>Food Style:
+                    <select id="foodStyle">
+                        <option value="dot">Dot</option>
+                        <option value="fruit">Fruit</option>
+                    </select>
+                </label>
+            </div>
+        </div>
+        <button onclick="startGame()">Start Game</button>
+    </div>
 
-      // Speed up slightly every 5 points, capped
-      if (score % 5 === 0 && speed > 50) {
-        speed -= 10;
-        clearInterval(gameLoopInterval);
-        gameLoopInterval = setInterval(gameLoop, speed);
-      }
-    } else {
-      // Remove tail if no food eaten
-      snake.shift();
-    }
+    <canvas id="gameCanvas" width="400" height="400" style="display:none;"></canvas>
 
-    draw();
-    updateInfoBar();
-  }
+    <div class="mobile-controls">
+        <div class="controls-row">
+            <div class="control-button" onclick="changeDirection('ArrowUp')">⬆️</div>
+        </div>
+        <div class="controls-row">
+            <div class="control-button" onclick="changeDirection('ArrowLeft')">⬅️</div>
+            <div class="control-button" onclick="changeDirection('ArrowDown')">⬇️</div>
+            <div class="control-button" onclick="changeDirection('ArrowRight')">➡️</div>
+        </div>
+    </div>
 
-  // Update info bar with score and time
-  function updateInfoBar() {
-    const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
-    const minutes = Math.floor(elapsedSeconds / 60);
-    const seconds = elapsedSeconds % 60;
-    const timeStr = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    <div id="endScreen" class="screen">
+        <div class="title">Game Over</div>
+        <p><strong>Score:</strong> <span id="finalScore"></span></p>
+        <p><strong>Length:</strong> <span id="finalLength"></span></p>
+        <p><strong>Time:</strong> <span id="finalTime"></span> seconds</p>
+        <button onclick="restartGame()">Play Again</button>
+    </div>
 
-    infoBar.textContent = `Score: ${score}  |  Time: ${timeStr}  |  Speed: ${Math.round(1000/speed)} moves/sec`;
-  }
+    <audio id="foodSound" src="https://www.soundjay.com/button/sounds/button-16.mp3"></audio>
+    <audio id="gameOverSound" src="https://www.soundjay.com/button/sounds/button-10.mp3"></audio>
 
-  // Game loop function
-  function gameLoop() {
-    update();
-  }
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        const startScreen = document.getElementById("startScreen");
+        const endScreen = document.getElementById("endScreen");
+        const foodSound = document.getElementById("foodSound");
+        const gameOverSound = document.getElementById("gameOverSound");
 
-  // Handle game over
-  function gameOver() {
-    isRunning = false;
-    clearInterval(gameLoopInterval);
-    sounds.gameOver.currentTime = 0;
-    sounds.gameOver.play();
+        let box = 20;
+        let snake;
+        let food;
+        let direction;
+        let game;
+        let score;
+        let startTime;
 
-    // Show game over screen with stats
-    const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
-    const minutes = Math.floor(elapsedSeconds / 60);
-    const seconds = elapsedSeconds % 60;
+        function initGame() {
+            snake = [{ x: 10, y: 10 }];
+            direction = "RIGHT";
+            score = 0;
+            generateFood();
+            startTime = Date.now();
+        }
 
-    gameOverStats.innerHTML = `
-      <p><strong>Final Score:</strong> ${score}</p>
-      <p><strong>Time Played:</strong> ${minutes}m ${seconds}s</p>
-    `;
-    gameOverScreen.style.display = 'flex';
-  }
+        function generateFood() {
+            food = {
+                x: Math.floor(Math.random() * canvas.width / box),
+                y: Math.floor(Math.random() * canvas.height / box)
+            };
+        }
 
-  // Reset game state
-  function resetGame() {
-    adjustCanvasSize();
-    initSnake();
-    placeFood();
-    score = 0;
-    speed = difficultyToSpeed(difficultySelect.value);
-    direction = 'right';
-    nextDirection = 'right';
-    startTime = Date.now();
-    isRunning = true;
-    gameOverScreen.style.display = 'none';
-    updateInfoBar();
-    draw();
-    clearInterval(gameLoopInterval);
-    gameLoopInterval = setInterval(gameLoop, speed);
-  }
+        function startGame() {
+            document.getElementById("gameCanvas").style.display = "block";
+            startScreen.classList.remove("active");
+            endScreen.classList.remove("active");
+            initGame();
+            const difficulty = document.getElementById("difficulty").value;
+            let speed = difficulty === 'easy' ? 200 : difficulty === 'medium' ? 150 : 100;
+            game = setInterval(draw, speed);
+        }
 
-  // Map difficulty to speed (ms per move)
-  function difficultyToSpeed(level) {
-    switch (level) {
-      case 'easy': return 200;
-      case 'medium': return 120;
-      case 'hard': return 80;
-      default: return 150;
-    }
-  }
+        function restartGame() {
+            document.getElementById("gameCanvas").style.display = "block";
+            endScreen.classList.remove("active");
+            initGame();
+            const difficulty = document.getElementById("difficulty").value;
+            let speed = difficulty === 'easy' ? 200 : difficulty === 'medium' ? 150 : 100;
+            game = setInterval(draw, speed);
+        }
 
-  // Event listeners for controls and keyboard
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            // Draw background
+            ctx.fillStyle = '#121212';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // Start game button
-  startGameBtn.addEventListener('click', () => {
-    snakeShape = snakeShapeSelect.value;
-    wallWrap = wallWrapCheckbox.checked;
-    snakeColor = snakeColorPicker.value;
-    foodColor = foodColorPicker.value;
-    speed = difficultyToSpeed(difficultySelect.value);
+            // Draw snake
+            ctx.fillStyle = "lime";
+            snake.forEach((segment, index) => {
+                ctx.beginPath();
+                ctx.arc(segment.x * box + box / 2, segment.y * box + box / 2, box / 2 - 2, 0, 2 * Math.PI);
+                ctx.fill();
+                if (index === 0) {
+                    // Draw tongue
+                    ctx.fillStyle = "red";
+                    ctx.fillRect(segment.x * box + box / 2 - 2, segment.y * box, 4, 6);
+                    ctx.fillStyle = "lime";
+                }
+            });
 
-    startModal.style.display = 'none';
-    resetGame();
-  });
+            // Draw food
+            const foodStyle = document.getElementById("foodStyle").value;
+            if (foodStyle === 'dot') {
+                ctx.fillStyle = "yellow";
+                ctx.beginPath();
+                ctx.arc(food.x * box + box / 2, food.y * box + box / 2, box / 2 - 4, 0, 2 * Math.PI);
+                ctx.fill();
+            } else {
+                ctx.fillStyle = "orange";
+                ctx.beginPath();
+                ctx.arc(food.x * box + box / 2, food.y * box + box / 2, box / 2 - 2, 0, 2 * Math.PI);
+                ctx.fill();
+            }
 
-  // Restart game button
-  restartBtn.addEventListener('click', () => {
-    gameOverScreen.style.display = 'none';
-    resetGame();
-  });
+            let head = { x: snake[0].x, y: snake[0].y };
 
-  // Keyboard controls
-  window.addEventListener('keydown', e => {
-    if (!isRunning) return;
+            if (direction === "LEFT") head.x--;
+            if (direction === "UP") head.y--;
+            if (direction === "RIGHT") head.x++;
+            if (direction === "DOWN") head.y++;
 
-    switch(e.key) {
-      case 'ArrowUp':
-      case 'w':
-      case 'W':
-        if (direction !== 'down') nextDirection = 'up';
-        sounds.move.play();
-        break;
-      case 'ArrowDown':
-      case 's':
-      case 'S':
-        if (direction !== 'up') nextDirection = 'down';
-        sounds.move.play();
-        break;
-      case 'ArrowLeft':
-      case 'a':
-      case 'A':
-        if (direction !== 'right') nextDirection = 'left';
-        sounds.move.play();
-        break;
-      case 'ArrowRight':
-      case 'd':
-      case 'D':
-        if (direction !== 'left') nextDirection = 'right';
-        sounds.move.play();
-        break;
-      case 'p':
-      case 'P':
-        togglePause();
-        break;
-    }
-  });
+            // Wall wrapping
+            head.x = (head.x + canvas.width / box) % (canvas.width / box);
+            head.y = (head.y + canvas.height / box) % (canvas.height / box);
 
-  // Pause / Resume toggle
-  function togglePause() {
-    if (!isRunning) return;
-    if (gameLoopInterval) {
-      clearInterval(gameLoopInterval);
-      gameLoopInterval = null;
-      infoBar.textContent += '  |  PAUSED';
-    } else {
-      gameLoopInterval = setInterval(gameLoop, speed);
-      updateInfoBar();
-    }
-  }
+            if (snake.some(segment => segment.x === head.x && segment.y === head.y)) {
+                clearInterval(game);
+                document.getElementById("finalScore").textContent = score;
+                document.getElementById("finalLength").textContent = snake.length;
+                document.getElementById("finalTime").textContent = ((Date.now() - startTime) / 1000).toFixed(1);
+                gameOverSound.play();
+                document.getElementById("gameCanvas").style.display = "none";
+                endScreen.classList.add("active");
+                return;
+            }
 
-  // Resize canvas on window resize
-  window.addEventListener('resize', () => {
-    if (isRunning) {
-      adjustCanvasSize();
-      draw();
-    }
-  });
+            snake.unshift(head);
 
-  // Initial setup (keep modal visible)
-  adjustCanvasSize();
+            if (head.x === food.x && head.y === food.y) {
+                score++;
+                foodSound.play();
+                generateFood();
+            } else {
+                snake.pop();
+            }
+        }
 
-})();
-</script>
+        function changeDirection(key) {
+            const opposite = {
+                LEFT: "RIGHT",
+                RIGHT: "LEFT",
+                UP: "DOWN",
+                DOWN: "UP"
+            };
+            let newDir = direction;
+            if (key === "ArrowLeft") newDir = "LEFT";
+            if (key === "ArrowUp") newDir = "UP";
+            if (key === "ArrowRight") newDir = "RIGHT";
+            if (key === "ArrowDown") newDir = "DOWN";
+            if (newDir !== opposite[direction]) direction = newDir;
+        }
 
+        document.addEventListener("keydown", e => {
+            changeDirection(e.key);
+        });
+    </script>
 </body>
+
 </html>
